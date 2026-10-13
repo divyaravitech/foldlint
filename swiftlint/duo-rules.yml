@@ -1,0 +1,76 @@
+# FoldLint rule pack for SwiftLint
+#
+# A lightweight, regex-only subset of FoldLint for teams that already run SwiftLint.
+# Copy the `custom_rules` block into your .swiftlint.yml.
+#
+# Regexes can't see structure, so these rules are deliberately narrower than FoldLint's:
+# there are no ArrangementView nesting checks, no toolbar text-only checks, no scene-lifecycle
+# check, no baselines and no score. duo_video_mirroring can't see whether you already set
+# automaticallyAdjustsVideoMirroring = false, so silence it with
+# `// swiftlint:disable:next duo_video_mirroring` once you have.
+#
+# Rule docs and Apple sources: https://github.com/divyaravitech/foldlint/blob/main/docs/rules.md
+
+custom_rules:
+  duo_uiscreen_main:
+    name: "iPhone Duo: UIScreen.main"
+    regex: '\bUIScreen\.main\b'
+    message: "UIScreen.main is deprecated (iOS 26) and ambiguous on iPhone Duo's two displays. Use traitCollection.displayScale, view/scene bounds, or view.window?.windowScene?.screen."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_screen_bounds:
+    name: "iPhone Duo: layout from screen bounds"
+    regex: '\b[sS]creen[?!]?\.(bounds|nativeBounds)\b'
+    message: "Sizing from screen bounds ignores Split View, vertical bars and the fold. Size from the view, the scene, or GeometryReader."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_idiom_branching:
+    name: "iPhone Duo: idiom branching"
+    regex: '\buserInterfaceIdiom\b'
+    message: "iPhone Duo reports .phone even on its regular-width inner display. Branch on horizontalSizeClass instead."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_orientation_branching:
+    name: "iPhone Duo: layout from orientation"
+    regex: '\b(interfaceOrientation|statusBarOrientation|orientationDidChangeNotification)\b|\bUIDevice\.current\.orientation\b'
+    message: "The iPhone Duo inner display doesn't honor supported orientations, so orientation doesn't tell you the available width. Use size classes."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_standalone_bar:
+    name: "iPhone Duo: standalone bar"
+    regex: '\b(UIToolbar|UINavigationBar|UITabBar)(\.init)?\s*\('
+    message: "Standalone bars don't adopt iPhone Duo's vertical bar layout. Use container-managed bars (UINavigationController/UITabBarController, .toolbar)."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_app_wide_window:
+    name: "iPhone Duo: app-wide window lookup"
+    regex: '\bUIApplication\.shared\.(keyWindow|windows|connectedScenes\.first)\b'
+    message: "App-wide window and scene lookups can return the wrong window when iPhone Duo shows more than one scene. Use view.window or the scene you were given."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_video_mirroring:
+    name: "iPhone Duo: video mirroring"
+    regex: '\.isVideoMirrored\s*=(?!=)'
+    message: "Assigning isVideoMirrored raises an exception while automaticallyAdjustsVideoMirroring is true or mirroring is unsupported. Check isVideoMirroringSupported and set automaticallyAdjustsVideoMirroring = false first."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_front_camera:
+    name: "iPhone Duo: camera direction from position"
+    regex: '\bposition\s*(==|!=)\s*(AVCaptureDevice\.Position)?\.front\b|\.front\s*(==|!=)\s*\w+\.position\b'
+    message: "position says where a camera sits, not which way it faces. On iPhone Duo use AVCaptureDeviceDirectionCoordinator to find the forward-facing camera."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: warning
+
+  duo_camera_discovery:
+    name: "iPhone Duo: camera discovery"
+    regex: 'AVCaptureDevice\.default\(\s*(AVCaptureDevice\.DeviceType)?\.builtIn(Outer|Inner)UltraWideCamera\b'
+    message: "The inner and outer ultra wide cameras can only be discovered with AVCaptureDevice.DiscoverySession."
+    excluded_match_kinds: [comment, doccomment, string]
+    severity: error

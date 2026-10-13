@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal binary
+        run: swift build -c release --product foldlint --arch arm64 --arch x86_64
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp .build/apple/Products/Release/foldlint dist/
+          cp LICENSE dist/
+          cd dist && zip -q ../foldlint-macos-universal.zip foldlint LICENSE
+          cd .. && shasum -a 256 foldlint-macos-universal.zip > foldlint-macos-universal.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: foldlint-macos-universal.zip*
+
+  linux:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static binary
+        run: swift build -c release --product foldlint --static-swift-stdlib
+      - name: Package
+        run: |
+          apt-get update -q && apt-get install -yq zip
+          mkdir -p dist && cp .build/release/foldlint LICENSE dist/
+          cd dist && zip -q ../foldlint-linux-x86_64.zip foldlint LICENSE
+          cd .. && sha256sum foldlint-linux-x86_64.zip > foldlint-linux-x86_64.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: foldlint-linux-x86_64.zip*
+
+  publish:
+    needs: [macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Verify version matches tag
+        run: |
+          VERSION=$(sed -nE 's/.*current = "([^"]+)".*/\1/p' Sources/FoldLintCore/Model.swift)
+          test "v$VERSION" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME doesn't match FoldLintVersion.current ($VERSION)"; exit 1; }
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" foldlint-*.zip foldlint-*.zip.sha256 \
+            --title "FoldLint $GITHUB_REF_NAME" --generate-notes

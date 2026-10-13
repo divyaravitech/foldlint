@@ -1,0 +1,75 @@
+name: FoldLint
+description: iPhone Duo readiness linter for Swift projects. Annotates pull requests and reports a readiness score.
+author: divyaravitech
+branding:
+  icon: smartphone
+  color: blue
+
+inputs:
+  path:
+    description: File or directory to lint, relative to the workspace.
+    default: "."
+  fail-on:
+    description: "Fail on findings at or above this level: error, warning, info, never."
+    default: error
+  min-score:
+    description: Fail if the readiness score is below this value (0-100). Leave empty for no minimum.
+    default: ""
+  baseline:
+    description: Path to a baseline file. Only findings that aren't in it are reported and gated.
+    default: ""
+  sarif:
+    description: Also write a SARIF report to this path (upload it with github/codeql-action/upload-sarif).
+    default: ""
+  badge:
+    description: Also write a shields.io endpoint badge JSON to this path.
+    default: ""
+
+outputs:
+  score:
+    description: The iPhone Duo readiness score (0-100).
+    value: ${{ steps.lint.outputs.score }}
+
+runs:
+  using: composite
+  steps:
+    - name: Cache FoldLint build
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.action_path }}/.build
+        key: foldlint-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles(format('{0}/Package.swift', github.action_path), format('{0}/Package.resolved', github.action_path), format('{0}/Sources/**/*.swift', github.action_path)) }}
+
+    - name: Build FoldLint
+      shell: bash
+      run: swift build -c release --package-path "$GITHUB_ACTION_PATH" --product foldlint
+
+    - name: Run FoldLint
+      id: lint
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_MIN_SCORE: ${{ inputs.min-score }}
+        INPUT_BASELINE: ${{ inputs.baseline }}
+        INPUT_SARIF: ${{ inputs.sarif }}
+        INPUT_BADGE: ${{ inputs.badge }}
+      run: |
+        set -euo pipefail
+        BIN="$GITHUB_ACTION_PATH/.build/release/foldlint"
+        BADGE="${INPUT_BADGE:-$RUNNER_TEMP/foldlint-badge.json}"
+        COMMON=("$INPUT_PATH")
+        if [ -n "$INPUT_BASELINE" ]; then COMMON+=(--baseline "$INPUT_BASELINE"); fi
+
+        # Job summary and score (never fails the step).
+        "$BIN" "${COMMON[@]}" --format markdown --fail-on never --badge "$BADGE" >> "$GITHUB_STEP_SUMMARY"
+        SCORE=$(sed -E 's/.*"message":"([0-9]+)%".*/\1/' "$BADGE")
+        echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+
+        if [ -n "$INPUT_SARIF" ]; then
+          "$BIN" "${COMMON[@]}" --format sarif --fail-on never --output "$INPUT_SARIF"
+        fi
+
+        # Inline annotations and the pass/fail gate.
+        GATE=(--format github --fail-on "$INPUT_FAIL_ON")
+        if [ -n "$INPUT_MIN_SCORE" ]; then GATE+=(--min-score "$INPUT_MIN_SCORE"); fi
+        "$BIN" "${COMMON[@]}" "${GATE[@]}"

@@ -1,0 +1,26 @@
+name: Rule proposal
+description: Propose a new iPhone Duo check
+labels: [new-rule, good first issue]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What breaks on iPhone Duo?
+    validations:
+      required: true
+  - type: textarea
+    id: bad
+    attributes:
+      label: Code that should be flagged
+      render: swift
+    validations:
+      required: true
+  - type: textarea
+    id: good
+    attributes:
+      label: Code that should NOT be flagged
+      render: swift
+  - type: input
+    id: source
+    attributes:
+      label: Source (Apple doc, video timestamp, forum post)

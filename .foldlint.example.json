@@ -1,0 +1,7 @@
+{
+  "disabled_rules": ["orientation-lock"],
+  "excluded": ["Vendor", "Generated"],
+  "severity": { "text-only-bar-item": "warning" },
+  "fail_on": "error",
+  "min_score": 80
+}

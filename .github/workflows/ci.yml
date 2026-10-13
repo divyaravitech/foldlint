@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-15
+            container: ""
+          - name: Linux, Swift 6.0
+            os: ubuntu-latest
+            container: swift:6.0
+          - name: Linux, Swift 6.1
+            os: ubuntu-latest
+            container: swift:6.1
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test --parallel
+      - name: "Example gate: BeforeDuo must fail"
+        run: |
+          set +e
+          swift run foldlint Examples/BeforeDuo --no-color
+          test $? -eq 1
+      - name: "Example gate: AfterDuo must pass with 100"
+        run: swift run foldlint Examples/AfterDuo --fail-on info --min-score 100
+      - name: SwiftPM plugin
+        run: swift package --disable-sandbox foldlint Examples/AfterDuo
+
+  swiftlint-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pyyaml
+      - run: python3 scripts/check_swiftlint_pack.py
+
+  action:
+    name: Action (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: foldlint
+        with:
+          path: Examples/AfterDuo
+          fail-on: info
+          min-score: "100"
+          sarif: ${{ runner.temp }}/foldlint.sarif
+      - name: Check outputs
+        shell: bash
+        run: |
+          test "${{ steps.foldlint.outputs.score }}" = "100"
+          test -s "${{ runner.temp }}/foldlint.sarif"
