@@ -11,7 +11,7 @@ jobs:
   macos:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build universal binary
         run: swift build -c release --product foldlint --arch arm64 --arch x86_64
       - name: Package
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     container: swift:6.0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build static binary
         run: swift build -c release --product foldlint --static-swift-stdlib
       - name: Package
@@ -48,7 +48,7 @@ jobs:
     needs: [macos, linux]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
