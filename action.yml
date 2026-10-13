@@ -44,7 +44,7 @@ runs:
         echo "key=foldlint-${RUNNER_OS}-${RUNNER_ARCH}-${HASH}" >> "$GITHUB_OUTPUT"
 
     - name: Cache FoldLint build
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.action_path }}/.build
         key: ${{ steps.cache-key.outputs.key }}
