@@ -31,7 +31,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: swift build
       - name: Test
@@ -49,7 +49,7 @@ jobs:
   swiftlint-pack:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pip install pyyaml
       - run: python3 scripts/check_swiftlint_pack.py
 
@@ -61,7 +61,7 @@ jobs:
         os: [macos-15, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./
         id: foldlint
         with:
