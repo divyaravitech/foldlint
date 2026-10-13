@@ -33,11 +33,21 @@ outputs:
 runs:
   using: composite
   steps:
+    # hashFiles() only works inside the workspace, and this action's own files live
+    # outside it when used from another repo, so compute the cache key ourselves.
+    - name: Compute cache key
+      id: cache-key
+      shell: bash
+      run: |
+        cd "$GITHUB_ACTION_PATH"
+        HASH=$( { cat Package.swift Package.resolved 2>/dev/null; find Sources -name '*.swift' -type f | LC_ALL=C sort | xargs cat; } | shasum -a 256 | cut -c1-16 )
+        echo "key=foldlint-${RUNNER_OS}-${RUNNER_ARCH}-${HASH}" >> "$GITHUB_OUTPUT"
+
     - name: Cache FoldLint build
       uses: actions/cache@v4
       with:
         path: ${{ github.action_path }}/.build
-        key: foldlint-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles(format('{0}/Package.swift', github.action_path), format('{0}/Package.resolved', github.action_path), format('{0}/Sources/**/*.swift', github.action_path)) }}
+        key: ${{ steps.cache-key.outputs.key }}
 
     - name: Build FoldLint
       shell: bash
