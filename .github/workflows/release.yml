@@ -21,7 +21,7 @@ jobs:
           cp LICENSE dist/
           cd dist && zip -q ../foldlint-macos-universal.zip foldlint LICENSE
           cd .. && shasum -a 256 foldlint-macos-universal.zip > foldlint-macos-universal.zip.sha256
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos
           path: foldlint-macos-universal.zip*
@@ -39,7 +39,7 @@ jobs:
           mkdir -p dist && cp .build/release/foldlint LICENSE dist/
           cd dist && zip -q ../foldlint-linux-x86_64.zip foldlint LICENSE
           cd .. && sha256sum foldlint-linux-x86_64.zip > foldlint-linux-x86_64.zip.sha256
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: foldlint-linux-x86_64.zip*
